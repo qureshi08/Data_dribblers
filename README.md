@@ -36,7 +36,7 @@ The same pipeline runs without the app:
 
 ## Where it stands
 
-
+Tested on broadcast clips of Bundesliga and LaLiga matches. On a 30 second Bundesliga clip from a fixed wide camera: the pitch mapped in every analysed frame, the two teams and the referee split by kit, the ball found in 77% of frames, possession 65 to 35 and passes counted for both sides. On a LaLiga tactical camera clip (Barcelona v Athletic), with a moving camera, small players and kits that look alike under stadium light, results are much weaker: the ball is lost more often and possession is unreliable. It runs on a laptop processor today, about a minute of computing per second of video in Fast mode; a GPU is the next step for full matches.
 Known limits: track numbers are not shirt numbers yet, the ball is lost when it is a few blurred pixels, close ups and replays break tracking, and shots are inferred from ball speed and direction.
 
 ## Credits
