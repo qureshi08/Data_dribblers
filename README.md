@@ -36,7 +36,6 @@ The same pipeline runs without the app:
 
 ## Where it stands
 
-Tested on broadcast clips of LaLiga and Bundesliga matches. On an 8 second clip of Barcelona v Athletic from minute 8, analysed at 12 frames a second: 23 player tracks for the 22 players on the pitch, every player on the right team in a hand check of four frames, the referee, linesmen and the goalkeeper told apart, and the ball found in 75 of 100 frames. It runs on a laptop processor today, which takes about 2 minutes of computing per second of video in Accurate mode; a GPU is the next step for full matches.
 
 Known limits: track numbers are not shirt numbers yet, the ball is lost when it is a few blurred pixels, close ups and replays break tracking, and shots are inferred from ball speed and direction.
 
