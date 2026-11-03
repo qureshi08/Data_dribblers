@@ -1,0 +1,18 @@
+# match videos, uploads and model weights (downloaded by setup_models.py, never committed)
+data/
+*.pt
+*.mp4
+*.mov
+*.mkv
+
+# analysed matches and test runs
+runs/
+
+# local environment
+.venv/
+__pycache__/
+*.pyc
+
+# third party reference captures used only while designing the page
+design/references/
+design/old_template_2026-11-01.html

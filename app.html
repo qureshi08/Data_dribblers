@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Data Dribblers</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..800&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Data Dribblers app home: upload a match, follow the analysis, open the match page. Same tokens as report_template.html. */
+:root{--ground:#121812;--surface:#1A211A;--raised:#242C24;--line:rgba(255,255,255,.08);--line2:rgba(255,255,255,.14);
+--text:#F3F4EF;--muted:#98A096;--dim:#646C63;--live:#C7F04B;--good:#4ED17E;--warn:#F2B33D;--bad:#F2555A;
+--sans:'Schibsted Grotesk',system-ui,sans-serif;--num:'Archivo',sans-serif}
+*{box-sizing:border-box}html,body{margin:0;background:var(--ground);color:var(--text);font-family:var(--sans)}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1040px;margin:0 auto;padding:0 24px 80px}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:22px 0}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:19px}.logo i{width:10px;height:10px;border-radius:50%;background:var(--live);box-shadow:0 0 14px rgba(199,240,75,.5)}
+.pill{padding:10px 18px;border-radius:999px;border:1px solid var(--line2);font-weight:500;font-size:15px}
+h1{font-size:52px;letter-spacing:-1.6px;margin:36px 0 10px;font-weight:600}
+.lede{color:var(--muted);font-size:19px;margin:0 0 34px;max-width:620px;line-height:1.5}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:26px}
+.drop{border:2px dashed var(--line2);border-radius:18px;padding:46px 24px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s}
+.drop:hover,.drop.over{border-color:var(--live);background:rgba(199,240,75,.04)}
+.drop b{display:block;font-size:22px;font-weight:600;margin-bottom:8px}.drop span{color:var(--muted)}
+.file{display:none;align-items:center;gap:16px;padding:16px 18px;border-radius:14px;background:var(--raised);margin-top:16px}
+.file video{width:120px;height:68px;object-fit:cover;border-radius:8px;background:#000}
+.file .n{font-weight:600}.file .m{color:var(--muted);font-size:14px;margin-top:4px}
+.file .x{margin-left:auto;color:var(--muted);cursor:pointer;font-size:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:22px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:8px;font-weight:500;letter-spacing:.2px}
+input{width:100%;background:var(--raised);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:13px 14px;font:500 16px var(--sans);outline:none}
+input:focus{border-color:var(--live)}
+.seg{display:flex;gap:6px;background:var(--raised);padding:5px;border-radius:12px}
+.seg button{flex:1;border:0;background:transparent;color:var(--muted);padding:10px 8px;border-radius:9px;font:500 15px var(--sans);cursor:pointer}
+.seg button.on{background:var(--text);color:#0C110C}
+.hint{color:var(--muted);font-size:14px;margin-top:10px;line-height:1.5}
+.go{margin-top:26px;width:100%;padding:17px;border:0;border-radius:14px;background:var(--live);color:#0C110C;font:600 18px var(--sans);cursor:pointer}
+.go:disabled{opacity:.35;cursor:default}
+.prog{display:none}
+.steps{display:grid;gap:10px;margin:8px 0 20px}
+.step{display:flex;align-items:center;gap:14px;color:var(--dim);font-size:17px}
+.step i{width:22px;height:22px;border-radius:50%;border:2px solid var(--line2);flex:none;display:grid;place-items:center;font-style:normal;font-size:13px}
+.step.on{color:var(--text)}.step.on i{border-color:var(--live);box-shadow:0 0 0 4px rgba(199,240,75,.15)}
+.step.ok{color:var(--muted)}.step.ok i{background:var(--live);border-color:var(--live);color:#0C110C}
+.bar{height:10px;border-radius:5px;background:var(--raised);overflow:hidden}.bar div{height:100%;width:0;background:var(--live);border-radius:5px;transition:width .6s}
+.eta{display:flex;justify-content:space-between;color:var(--muted);font-size:14px;margin-top:10px;font-family:var(--num)}
+.log{margin-top:14px;font:12px ui-monospace,monospace;color:var(--dim);white-space:pre-wrap;max-height:60px;overflow:hidden}
+.err{color:var(--bad);margin-top:14px;line-height:1.5}
+.open{display:none;margin-top:22px;text-align:center;padding:17px;border-radius:14px;background:var(--live);color:#0C110C;font:600 18px var(--sans)}
+h2{font-size:26px;margin:56px 0 16px;font-weight:600;letter-spacing:-.4px}
+.list{display:grid;gap:10px}
+.row{display:flex;align-items:center;gap:16px;padding:18px 20px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.row .t{font-weight:600}.row .s{color:var(--muted);font-size:14px;margin-top:4px}
+.tag{margin-left:auto;padding:7px 12px;border-radius:999px;font-size:13px;font-weight:600;background:var(--raised);color:var(--muted);white-space:nowrap}
+.tag.done{background:rgba(199,240,75,.14);color:var(--live)}.tag.fail{background:rgba(242,85,90,.14);color:var(--bad)}
+a.row:hover{border-color:var(--line2)}
+.kits{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;align-items:center}
+.kits button{width:26px;height:26px;border-radius:50%;border:2px solid var(--line2);cursor:pointer;padding:0}
+.kits button.on{outline:2px solid var(--live);outline-offset:2px}
+.kits .auto{width:auto;height:26px;border-radius:999px;padding:0 10px;background:var(--raised);color:var(--muted);font:500 12px var(--sans)}
+.kits .auto.on{color:var(--text)}
+.pickr{display:none;margin-top:18px}
+.pickr video{width:100%;aspect-ratio:16/9;background:#000;border-radius:14px;display:block;object-fit:contain}
+.tl{position:relative;height:46px;margin-top:14px;cursor:pointer;touch-action:none}
+.tl .track{position:absolute;left:0;right:0;top:19px;height:8px;border-radius:4px;background:var(--raised)}
+.tl .win{position:absolute;top:13px;height:20px;border-radius:6px;background:rgba(199,240,75,.22);border:1.5px solid var(--live)}
+.tl .knob{position:absolute;top:6px;width:6px;height:34px;margin-left:-3px;border-radius:3px;background:var(--live);box-shadow:0 0 0 4px rgba(199,240,75,.18)}
+.tl .head{position:absolute;top:10px;width:2px;height:26px;margin-left:-1px;background:var(--text);opacity:.7}
+.tlrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:6px;font:500 14px var(--num);color:var(--muted)}
+.tlrow b{color:var(--text);font-weight:600}
+.btns{display:flex;gap:8px;margin-top:12px}.btns button{border:1px solid var(--line2);background:transparent;color:var(--text);border-radius:10px;padding:10px 14px;font:500 14px var(--sans);cursor:pointer}
+.btns button:hover{border-color:var(--live)}
+@media(max-width:700px){.grid{grid-template-columns:1fr}h1{font-size:38px}}
+</style></head>
+<body><div class="wrap">
+<div class="nav"><a class="logo" href="/"><i></i>Data Dribblers</a><a class="pill" href="#matches">Your matches</a></div>
+<h1>Upload a match</h1>
+<p class="lede">Drop in the video you already have. Data Dribblers finds every player and the ball, maps them onto the pitch and builds the full match page.</p>
+
+<div class="card" id="form">
+  <div class="drop" id="drop"><b>Drop your match video here</b><span>or click to choose a file. MP4, MOV or MKV from a phone or a camera.</span></div>
+  <input type="file" id="pick" accept="video/*" hidden>
+  <div class="file" id="file"><video id="thumb" muted></video><div><div class="n" id="fname"></div><div class="m" id="fmeta"></div></div><div class="x" id="clear">Remove</div></div>
+  <div class="pickr" id="pickr">
+    <label>Where does the match start? Drag the green marker to kick off. The shaded part is what gets analysed.</label>
+    <video id="pv" muted playsinline preload="auto"></video>
+    <div class="tl" id="tl"><div class="track"></div><div class="win" id="tlwin"></div><div class="head" id="tlhead"></div><div class="knob" id="tlknob"></div></div>
+    <div class="tlrow"><span>Start <b id="tls">00:00</b> · ends <b id="tle">00:30</b></span><span>Video <b id="tld">00:00</b></span></div>
+    <div class="btns"><button id="pplay">Play from the start point</button><button id="puse">Start where the preview is</button><button id="pback">Back 5 s</button><button id="pfwd">Forward 5 s</button></div>
+  </div>
+  <div class="grid">
+    <div><label>Match title</label><input id="title" placeholder="Sunday league, week 6"></div>
+    <div><label>Date</label><input id="date" placeholder="2 Nov 2026"></div>
+    <div><label>Home team</label><input id="home" placeholder="Home"><div class="kits" data-side="home"></div></div>
+    <div><label>Away team</label><input id="away" placeholder="Away"><div class="kits" data-side="away"></div></div>
+  </div>
+  <div class="grid">
+    <div><label>How much to analyse</label><div class="seg" id="len"><button data-s="30" class="on">30 s</button><button data-s="60">1 min</button><button data-s="120">2 min</button><button data-s="0">Whole video</button></div></div>
+    <div><label>Analysis starts at</label><input id="start" type="hidden" value="0"><div id="startShow" style="font:600 22px var(--num);padding-top:8px">00:00</div></div>
+  </div>
+  <div class="grid">
+    <div><label>Speed</label><div class="seg" id="mode"><button data-m="fast" class="on">Fast</button><button data-m="accurate">Accurate</button></div></div>
+    <div><label>Time on this computer</label><div id="est" style="font:600 22px var(--num);padding-top:8px">Choose a video</div></div>
+  </div>
+  <div class="hint">This computer analyses on its processor, so each minute of video takes a while. Fast checks six frames a second at a smaller size. Accurate checks twelve frames a second at full size and runs a second model to find the ball.</div>
+  <button class="go" id="go" disabled>Analyse match</button>
+</div>
+
+<div class="card prog" id="prog">
+  <div style="font-weight:600;font-size:22px;margin-bottom:6px" id="ptitle"></div><div class="hint" id="pteams" style="margin:0 0 18px"></div>
+  <div class="steps" id="steps"></div>
+  <div class="bar"><div id="pbar"></div></div>
+  <div class="eta"><span id="pnow">Uploading</span><span id="peta"></span></div>
+  <div class="log" id="plog"></div><div class="err" id="perr"></div>
+  <a class="open" id="popen">Open the match page</a>
+</div>
+
+<h2 id="matches">Your matches</h2>
+<div class="list" id="list"></div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const STAGES = [['upload', 'Uploading the video'], ['queued', 'Waiting for the analyser'], ['analyze', 'Finding every player and the ball'], ['ball', 'Picking out the match ball'], ['stats', 'Counting passes, runs and possession'], ['advanced', 'Working out space, pressure and lines'], ['report', 'Building the match page']];
+const MODE = { fast: { perSec: 6, sec: 3.2 }, accurate: { perSec: 12, sec: 7.5 } };   // frames a second analysed, seconds per frame measured on this laptop
+let file = null, dur = 0, seconds = 30, mode = 'fast';
+const fmt = s => s >= 60 ? `${Math.floor(s / 60)} min ${Math.round(s % 60)} s` : `${Math.round(s)} s`;
+
+/* the file */
+const take = f => { if (!f || !f.type.startsWith('video')) return; file = f; const url = URL.createObjectURL(f), v = $('thumb'); v.src = url;
+  $('pv').src = url; $('pickr').style.display = 'block';
+  v.onloadedmetadata = () => { dur = v.duration; v.currentTime = Math.min(5, dur / 3); setStart(0); drawTl(); $('fmeta').textContent = `${fmt(dur)} · ${v.videoWidth}x${v.videoHeight} · ${(f.size / 1e6).toFixed(0)} MB`; update(); };
+  $('fname').textContent = f.name; $('file').style.display = 'flex'; $('drop').style.display = 'none'; if (!$('title').value) $('title').value = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' '); update(); };
+$('drop').onclick = () => $('pick').click(); $('pick').onchange = e => take(e.target.files[0]);
+$('drop').ondragover = e => { e.preventDefault(); $('drop').classList.add('over'); }; $('drop').ondragleave = () => $('drop').classList.remove('over');
+$('drop').ondrop = e => { e.preventDefault(); $('drop').classList.remove('over'); take(e.dataTransfer.files[0]); };
+$('clear').onclick = () => { file = null; dur = 0; $('pickr').style.display = 'none'; $('pv').removeAttribute('src'); $('file').style.display = 'none'; $('drop').style.display = ''; update(); };
+const seg = (id, key, set) => $(id).querySelectorAll('button').forEach(b => b.onclick = () => { $(id).querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); set(b.dataset[key]); update(); drawTl(); });
+seg('len', 's', v => seconds = +v); seg('mode', 'm', v => mode = v);
+
+/* kit colours: telling the analyser what each team wears makes the team split reliable (Auto guesses from the shirts) */
+const KITS = [['White', '#f2f2f2'], ['Black', '#1b1b1b'], ['Red', '#c8102e'], ['Claret', '#7a1f3d'], ['Navy', '#13294b'], ['Blue', '#1f4fbf'], ['Sky', '#6cabdd'], ['Yellow', '#f6d10b'], ['Green', '#1c8c3c'], ['Orange', '#f37021'], ['Purple', '#5b2c83'], ['Lavender', '#d8c6e0'], ['Pink', '#f19cbb']];
+const kit = { home: '', away: '' };
+document.querySelectorAll('.kits').forEach(box => { const side = box.dataset.side;
+  box.innerHTML = `<button class="auto on" data-c="">Auto</button>` + KITS.map(([n, c]) => `<button title="${n}" data-c="${c}" style="background:${c}"></button>`).join('');
+  box.querySelectorAll('button').forEach(b => b.onclick = () => { box.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); kit[side] = b.dataset.c; }); });
+
+/* the start point: drag on the timeline, the preview follows */
+const mmss = s => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+let start = 0;
+function setStart(t, seek = true) { start = Math.max(0, Math.min(t, Math.max(0, dur - 2))); $('start').value = start.toFixed(1); if (seek) { $('pv').pause(); $('pv').currentTime = start; } drawTl(); update(); }
+function drawTl() {
+  if (!dur) return; const len = seconds ? Math.min(seconds, dur - start) : dur - start, pct = x => (x / dur * 100) + '%';
+  $('tlknob').style.left = pct(start); $('tlwin').style.left = pct(start); $('tlwin').style.width = (len / dur * 100) + '%'; $('tlhead').style.left = pct($('pv').currentTime || 0);
+  $('tls').textContent = mmss(start); $('tle').textContent = mmss(start + len); $('tld').textContent = mmss(dur); $('startShow').textContent = mmss(start);
+}
+const tlAt = e => { const r = $('tl').getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * dur; };
+let dragging = false;
+$('tl').onpointerdown = e => { if (!dur) return; dragging = true; $('tl').setPointerCapture(e.pointerId); setStart(tlAt(e)); };
+$('tl').onpointermove = e => { if (dragging) setStart(tlAt(e)); };
+$('tl').onpointerup = () => { dragging = false; };
+$('pv').ontimeupdate = () => drawTl();
+$('pplay').onclick = () => { const v = $('pv'); if (!v.paused) { v.pause(); $('pplay').textContent = 'Play from the start point'; return; } v.currentTime = start; v.play(); $('pplay').textContent = 'Pause'; };
+$('puse').onclick = () => setStart($('pv').currentTime, false);
+$('pback').onclick = () => { const v = $('pv'); v.currentTime = Math.max(0, v.currentTime - 5); drawTl(); };
+$('pfwd').onclick = () => { const v = $('pv'); v.currentTime = Math.min(dur, v.currentTime + 5); drawTl(); };
+
+/* the honest estimate */
+function update() {
+  $('go').disabled = !file; if (!file || !dur) { $('est').textContent = file ? 'Reading the video…' : 'Choose a video'; return; }
+  const start = +$('start').value || 0, len = Math.max(1, Math.min(seconds || dur, dur - start)), m = MODE[mode], min = len * m.perSec * m.sec / 60 + 1;
+  $('est').textContent = `about ${min < 90 ? Math.round(min) + ' min' : (min / 60).toFixed(1) + ' hours'} for ${fmt(len)}`;
+}
+
+/* upload, then follow the job */
+$('go').onclick = () => {
+  const p = new URLSearchParams({ title: $('title').value, date: $('date').value, home: $('home').value, away: $('away').value, seconds, start: start.toFixed(1), mode, home_colour: kit.home, away_colour: kit.away });
+  showProgress({ title: $('title').value || file.name, teams: `${$('home').value || 'Home'} vs ${$('away').value || 'Away'}`, stage: 'upload', progress: 0 });
+  const x = new XMLHttpRequest(); x.open('POST', '/api/upload?' + p); x.setRequestHeader('X-Filename', encodeURIComponent(file.name));
+  x.upload.onprogress = e => { if (e.lengthComputable) { $('pbar').style.width = (e.loaded / e.total * 100) + '%'; $('peta').textContent = `${(e.loaded / 1e6).toFixed(0)} of ${(e.total / 1e6).toFixed(0)} MB`; } };
+  x.onload = () => { const r = JSON.parse(x.responseText || '{}'); if (r.id) { history.replaceState(null, '', '?job=' + r.id); follow(r.id); } else $('perr').textContent = r.error || 'The upload failed.'; };
+  x.onerror = () => { $('perr').textContent = 'The upload failed. Check that the app is still running.'; }; x.send(file);
+};
+function showProgress(j) { $('form').style.display = 'none'; $('prog').style.display = 'block'; render(j); }
+function render(j) {
+  $('ptitle').textContent = j.title; $('pteams').textContent = (j.teams || '').replace(',', ' vs ');
+  const k = j.stage === 'done' ? STAGES.length : Math.max(0, STAGES.findIndex(s => s[0] === j.stage));
+  $('steps').innerHTML = STAGES.map(([id, t], i) => `<div class="step ${i < k ? 'ok' : i === k && j.stage !== 'failed' ? 'on' : ''}"><i>${i < k ? '✓' : ''}</i>${t}</div>`).join('');
+  if (j.stage !== 'upload') { const w = j.stage === 'done' ? 100 : j.stage === 'analyze' ? 5 + 80 * (j.progress || 0) : ({ queued: 3, ball: 86, stats: 89, advanced: 93, report: 97 })[j.stage] || 0; $('pbar').style.width = w + '%'; }
+  $('pnow').textContent = j.stage === 'done' ? 'Ready' : j.stage === 'failed' ? 'Stopped' : (STAGES.find(s => s[0] === j.stage) || [, ''])[1];
+  if (j.stage === 'analyze') $('peta').textContent = j.eta_min != null ? `about ${Math.max(1, Math.round(j.eta_min))} min left` : 'working out the time left'; else if (j.stage === 'queued') $('peta').textContent = 'another match is being analysed first';
+  else if (j.stage !== 'upload') $('peta').textContent = j.stage === 'done' ? '' : 'nearly there';
+  $('plog').textContent = (j.log || []).slice(-2).join('\n'); $('perr').textContent = j.error || '';
+  if (j.stage === 'done') { $('popen').style.display = 'block'; $('popen').href = j.report; }
+}
+async function follow(id) { const r = await fetch('/api/jobs/' + id); if (!r.ok) return; const j = await r.json(); showProgress(j); list(); if (!['done', 'failed'].includes(j.stage)) setTimeout(() => follow(id), 2000); }
+
+/* the matches */
+async function list() {
+  const jobs = await (await fetch('/api/jobs')).json();
+  $('list').innerHTML = jobs.length ? jobs.map(j => { const ready = j.stage === 'done', tag = ready ? (j.example ? 'Example' : 'Ready') : j.stage === 'failed' ? 'Stopped' : j.stage === 'analyze' ? `Analysing ${Math.round((j.progress || 0) * 100)}%` : j.stage === 'queued' ? 'Waiting' : 'Working';
+    return `<a class="row" href="${ready ? j.report : '?job=' + j.id}"><div><div class="t">${j.title}</div><div class="s">${(j.teams || '').replace(',', ' vs ') || 'Analysed match'}${j.created ? ' · ' + new Date(j.created * 1000).toLocaleDateString() : ''}</div></div><span class="tag ${ready ? 'done' : j.stage === 'failed' ? 'fail' : ''}">${tag}</span></a>`; }).join('')
+    : '<div class="hint">Your analysed matches will appear here.</div>';
+}
+list(); const q = new URLSearchParams(location.search).get('job'); if (q) follow(q);
+</script></body></html>

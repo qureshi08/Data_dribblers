@@ -1,0 +1,10 @@
+ultralytics==8.4.197
+supervision==0.31.3
+torch
+opencv-python
+numpy
+scipy
+scikit-learn
+lap
+gdown
+imageio-ffmpeg

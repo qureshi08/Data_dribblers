@@ -1,0 +1,24 @@
+// Exercises the match centre features in headless Chrome and screenshots them: node test_features.mjs <run>
+import fs from 'fs'; import { createRequire } from 'module';
+const require = createRequire('D:/Anas Personal Projects/Anas_Qureshi.ai/Quitnafs/Instagram/RealisticPosts/package.json');
+const puppeteer = require('puppeteer');
+const run = process.argv[2] || 'sample_720', out = `D:/Anas Personal Projects/Anas_Qureshi.ai/FootballCV/runs/${run}/_ui`;
+fs.mkdirSync(out, { recursive: true });
+const b = await puppeteer.launch({ headless: 'new' }), p = await b.newPage(), errors = [];
+p.on('pageerror', e => errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+await p.setViewport({ width: 1440, height: 900 });
+await p.goto(`http://localhost:4810/${run}/report.html`, { waitUntil: 'networkidle2' });
+const seek = (t) => p.evaluate(async t => { const v = document.getElementById('vid'); await new Promise(r => v.readyState >= 2 ? r() : v.addEventListener('loadeddata', r, { once: true }));
+  v.pause(); await new Promise(r => { v.addEventListener('seeked', r, { once: true }); v.currentTime = t; }); await new Promise(r => setTimeout(r, 600)); }, t);
+await seek(1.5);
+const id = await p.evaluate(() => { const i = idxAt(1.5); SPOT = A ? A.live.holder[i] : FR[i][1][0][0]; return SPOT; });
+await seek(1.6);
+await (await p.$('#stage')).screenshot({ path: `${out}/f_spotlight.png` });
+await p.evaluate(() => { opts.follow = true; opts.pc = false; });
+for (let k = 0; k < 30; k++) await p.evaluate(() => new Promise(r => requestAnimationFrame(r)));
+await (await p.$('#stage')).screenshot({ path: `${out}/f_followcam.png` });
+await p.evaluate(() => { opts.follow = false; opts.pc = true; for (const q of Object.keys(ASKS)) { document.querySelector('#asks').querySelectorAll('button').forEach(b => { if (b.textContent === q) b.click(); }); } });
+const row = await p.$('.g2'); await row.screenshot({ path: `${out}/f_moments_chat.png` });
+const moments = await p.evaluate(() => MOMENTS.length);
+console.log('spotlight on', id, 'moments', moments, 'errors', JSON.stringify(errors));
+await b.close();
