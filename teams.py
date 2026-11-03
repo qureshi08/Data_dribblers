@@ -20,6 +20,51 @@ from sklearn.cluster import KMeans
 from stitch import stitch
 
 MAX_SAMPLES = 40
+CROPS_EVERY = 3     # every third colour sample also keeps the whole player crop for the appearance model
+
+
+def embed(crops):
+    """SigLIP image embeddings of player crops (the method in Roboflow's sports project). It sees the whole kit:
+    stripes, shorts, socks and pattern, not one median colour, so sun and shade bands across the pitch move it much
+    less than they move the shirt colour. Returns None when transformers or the model is missing."""
+    try:
+        import os
+        os.environ.setdefault("HF_HUB_DISABLE_XET", "1")   # the fast downloader's DLL is blocked by Smart App Control
+        os.environ.setdefault("HF_HOME", str(Path(__file__).parent / "data" / "hf"))
+        import torch
+        from transformers import AutoImageProcessor, SiglipVisionModel
+        name = "google/siglip-base-patch16-224"
+        model, proc = SiglipVisionModel.from_pretrained(name).eval(), AutoImageProcessor.from_pretrained(name)
+    except Exception as e:  # noqa: BLE001
+        print(f"appearance model unavailable ({str(e)[:80]}), teams by colour only")
+        return None
+    out = []
+    with torch.no_grad():
+        for i in range(0, len(crops), 32):
+            rgb = [c[..., ::-1].copy() for c in crops[i:i + 32]]
+            out.append(model(**proc(images=rgb, return_tensors="pt")).pooler_output.numpy())
+    return np.vstack(out)
+
+
+def appearance_labels(tids, crops):
+    """two groups by appearance: every crop is embedded, the crops are grouped in two, each player takes the
+    group most of his crops fell in. None when there are too few crops to trust."""
+    owners = [t for t in tids for _ in crops.get(t, [])]
+    if len(owners) < 4 * len(tids) or len(tids) < 6:
+        return None
+    E = embed([c for t in tids for c in crops.get(t, [])])
+    if E is None:
+        return None
+    from sklearn.decomposition import PCA
+    E = E / np.linalg.norm(E, axis=1, keepdims=True)
+    Z = PCA(n_components=min(8, len(E) - 1), random_state=0).fit_transform(E)
+    lab = KMeans(n_clusters=2, n_init=10, random_state=0).fit(Z).labels_
+    votes = defaultdict(list)
+    for t, l in zip(owners, lab):
+        votes[t].append(l)
+    lab = np.array([Counter(votes[t]).most_common(1)[0][0] for t in tids])
+    share = np.array([np.mean(np.array(votes[t]) == l) for t, l in zip(tids, lab)])
+    return lab, share, np.array([len(votes[t]) for t in tids])
 
 
 def grass_hsv(frame):
@@ -53,6 +98,7 @@ def torso(frame, box, grass):
     return np.sqrt(hist / max(hist.sum(), 1)), crop[keep].mean(axis=0), lab[keep].astype(float) * LAB_W
 
 
+APPEARANCE = True   # False: teams by shirt colour only
 LAB_W = np.array([.35, 1, 1])   # brightness counts a little: enough for black v white kits, not enough for sun v shade
 
 
@@ -85,7 +131,7 @@ def assign(video, frames, tracks, hints=None):
     the nearer kit colour (by colour, not brightness), which also handles striped kits. Without hints the shirts are
     grouped into three: the two biggest groups are the teams, a small third group that matches neither kit is the
     officials, whom the detector sometimes calls players."""
-    features, colours, pixels = defaultdict(list), defaultdict(list), defaultdict(list)
+    features, colours, pixels, crops = defaultdict(list), defaultdict(list), defaultdict(list), defaultdict(list)
     players = {int(k) for k, v in tracks.items() if v["role"] in ("player", "goalkeeper")}
     from frames import frames_at
     by_f = {rec["f"]: rec for rec in frames}
@@ -98,6 +144,13 @@ def assign(video, frames, tracks, hints=None):
         for p in need:
             f, c, px = torso(frame, p["box"], grass)
             if f is not None:
+                if len(features[p["id"]]) % CROPS_EVERY == 0:
+                    x1, y1, x2, y2 = (int(v) for v in p["box"]); bh, bw = y2 - y1, x2 - x1
+                    # shirt and shorts only: on a wide camera the whole box is mostly grass, and the model then
+                    # groups by background (62% agreement with the checked colour split; 95% on this crop)
+                    crop = frame[max(y1 + int(bh * .1), 0):y1 + int(bh * .6), max(x1 + int(bw * .15), 0):x2 - int(bw * .15)]
+                    if crop.size:
+                        crops[p["id"]].append(crop.copy())
                 features[p["id"]].append(f); colours[p["id"]].append(c)
                 pixels[p["id"]].append(px[np.random.default_rng(p["id"]).choice(len(px), min(len(px), 60), replace=False)])
 
@@ -129,6 +182,22 @@ def assign(video, frames, tracks, hints=None):
     keep = [i for i, lab in enumerate(labels) if lab in big]
     tids = [tids[i] for i in keep]; labels = np.array([big.index(labels[i]) for i in keep])
     km = type("KM", (), {})(); km.labels_ = labels; km.cluster_centers_ = centers[big]
+    # the appearance model makes the final split between the two teams; colour stays for officials and for naming
+    app = appearance_labels(tids, crops) if APPEARANCE else None
+    if app is not None:
+        # colour and appearance each decide where they are sure: the appearance groups are lined up with the colour
+        # groups, then a player whose crops fall in one appearance group at least 75% of the time takes that group.
+        # On Barcelona v Athletic the two disagreed on 3 of 21: one track that was grass, two players the appearance
+        # model was unsure of (58%), all three right by colour.
+        app, share, n = app
+        if np.mean(app == labels) < .5:
+            app = 1 - app
+        sure = (share >= .75) & (n >= 6) & (app != labels)   # a short track (one that drifted onto grass) never overrides
+        print(f"teams by appearance: {len(tids)} players, agrees with colour on {np.mean(app == labels):.0%}, overrides colour for {int(sure.sum())}")
+        labels = np.where(sure, app, labels)
+        if min(np.sum(labels == 0), np.sum(labels == 1)) >= 2:
+            Xk = np.array([[.5 * med[t][0], med[t][1], med[t][2]] for t in tids])
+            km.labels_ = labels; km.cluster_centers_ = np.array([Xk[labels == q].mean(axis=0) for q in (0, 1)])
     order = [0, 1]
     if hints and len(hints) == 2:
         # the kit colours from the upload form only name the groups: the pairing with the smaller total distance wins

@@ -8,3 +8,4 @@ scikit-learn
 lap
 gdown
 imageio-ffmpeg
+transformers

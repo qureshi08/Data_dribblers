@@ -63,6 +63,49 @@ def detect(run, frames, video, imgsz=1280):
             print(f"  ball candidates: {k + 1}/{len(frames)} frames", flush=True)
 
 
+def tiles(w, h, cols=3, rows=2, overlap=.2):
+    """overlapping tiles covering the frame, as (x, y, w, h)"""
+    tw, th = int(w / (cols - (cols - 1) * overlap)), int(h / (rows - (rows - 1) * overlap))
+    xs = np.linspace(0, w - tw, cols).astype(int); ys = np.linspace(0, h - th, rows).astype(int)
+    return [(x, y, tw, th) for y in ys for x in xs]
+
+
+def sliced(model, frame, imgsz=1280, conf=0.1):
+    """ball candidates from overlapping tiles, each enlarged to imgsz (sliced inference, as SAHI does).
+
+    On a wide tactical camera the ball is 4 to 8 pixels across, smaller than anything the model learned from the
+    Bundesliga broadcasts it was trained on; a 3 x 2 tile enlarged to the model's size makes it about twice as big."""
+    h, w = frame.shape[:2]
+    crops = [frame[y:y + th, x:x + tw] for x, y, tw, th in tiles(w, h)]
+    out = []
+    for (x, y, _, _), r in zip(tiles(w, h), model.predict(crops, imgsz=imgsz, conf=conf, verbose=False)):
+        for (x1, y1, x2, y2), c in zip(r.boxes.xyxy.cpu().numpy(), r.boxes.conf.cpu().numpy()):
+            out.append({"px": [round(float((x1 + x2) / 2 + x), 1), round(float((y1 + y2) / 2 + y), 1)], "conf": round(float(c), 3)})
+    return out
+
+
+def merge(a, b, r=6):
+    """candidates from two passes, keeping the more confident of any two closer than r pixels"""
+    out = []
+    for c in sorted(a + b, key=lambda c: -c["conf"]):
+        if all(np.hypot(c["px"][0] - o["px"][0], c["px"][1] - o["px"][1]) > r for o in out):
+            out.append(c)
+    return out
+
+
+def add_sliced(frames, video, imgsz=1280):
+    """adds sliced ball candidates to every analysed frame (one pass through the video)"""
+    from ultralytics import YOLO
+    model = YOLO(HERE / "data" / "football-ball-detection.pt")
+    from frames import frames_at
+    by_f = {rec["f"]: rec for rec in frames}
+    for k, (f, frame) in enumerate(frames_at(video, by_f)):
+        by_f[f]["balls"] = merge(by_f[f].get("balls", []), sliced(model, frame, imgsz))
+        by_f[f]["sliced"] = True
+        if k % 10 == 0:
+            print(f"  sliced ball search: {k + 1}/{len(frames)} frames", flush=True)
+
+
 def choose(frames, roles=None):
     """Short ball tracks first, then the best chain of them.
 
@@ -152,11 +195,14 @@ def choose(frames, roles=None):
 
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("run"); ap.add_argument("--imgsz", type=int, default=1280)
+    ap.add_argument("--slice", action="store_true", help="also search 3 x 2 enlarged tiles for a small ball (about 6 times the ball model's time)")
     a = ap.parse_args()
     path = Path(a.run) / "tracks.json"; data = json.loads(path.read_text())
     frames = data["frames"]
     if not any("balls" in r for r in frames):
         detect(a.run, frames, data["video"], a.imgsz)
+    if a.slice and not all(r.get("sliced") for r in frames):
+        add_sliced(frames, data["video"], a.imgsz)
     chosen = choose(frames, {k: v["role"] for k, v in data["tracks"].items()})
     for rec, c in zip(frames, chosen):
         rec["ball"] = None if c is None else {"px": c["px"], "xy": [round(c["xy"][0], 2), round(c["xy"][1], 2)]}
