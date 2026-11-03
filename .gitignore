@@ -16,3 +16,6 @@ __pycache__/
 # third party reference captures used only while designing the page
 design/references/
 design/old_template_2026-11-01.html
+
+# YC application drafts and demo recordings (private)
+YC/
