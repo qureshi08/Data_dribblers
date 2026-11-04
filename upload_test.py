@@ -1,6 +1,6 @@
 """Uploads a video to the running app (http://localhost:4820) the same way app.html does, streaming the file.
 
-    py upload_test.py <video> --title ... --home BAR --away ATH --home-colour '#a50044+#1d3c87' --away-colour '#d8c6e0' --start 480 --seconds 8 --mode accurate
+    py upload_test.py <video> --title ... --home HOME --away AWAY --home-colour '#d81e05' --away-colour '#ffffff' --start 480 --seconds 8 --mode accurate
 """
 import argparse
 import http.client

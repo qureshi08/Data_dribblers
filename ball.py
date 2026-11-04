@@ -2,7 +2,7 @@
 
 Broadcasts are full of other balls: spare balls by the touchline, balls in the ball boys' hands, warm up balls. Taking
 the single most confident detection per frame (what analyze.py did) locks onto a sharp, still spare ball and never
-follows the small, blurred match ball (Barcelona v Athletic, 2026-11-02: 195 of 366 frames on one spot by the halfway
+follows the small, blurred match ball (a LaLiga tactical camera, 2026-11-02: 195 of 366 frames on one spot by the halfway
 touchline). Here every candidate in every frame is mapped onto the pitch and the most believable single path is chosen:
 
   * off the pitch (more than 1 m outside the lines) is never the ball in play;
@@ -112,7 +112,7 @@ def choose(frames, roles=None):
     1. candidates on the pitch are linked frame to frame into short tracks (each step within ball speed, gaps of up
        to 1 s allowed);
     2. a track that stays put (under 1.5 m of movement) for over 2 s with no player close by is not the match ball:
-       spare balls by the lines, the painted penalty spot (Barcelona v Athletic: 13 s at 11 m, 32 m);
+       spare balls by the lines, the painted penalty spot (13 s on one spot in a tactical camera test);
     3. the chosen tracks never overlap in time and every jump between them is physically possible, so a frame with
        no ball no longer lets the path teleport (the single frame version jumped 67 m)."""
     t = [rec["t"] for rec in frames]

@@ -80,7 +80,7 @@ def torso(frame, box, grass):
 
     The histogram is over Lab a and b only (colour without brightness): the same shirt in sun and in shade lands in
     the same bins. Splitting on full HSV histograms put sunlit and shaded players in different "teams"
-    (Barcelona v Athletic, 2026-11-02: 56 tracks against 25, team colours grey and brown)."""
+    (a LaLiga tactical camera, 2026-11-02: 56 tracks against 25, team colours grey and brown)."""
     x1, y1, x2, y2 = (int(v) for v in box)
     h, w = y2 - y1, x2 - x1
     if h < 20 or w < 8:
@@ -159,8 +159,8 @@ def assign(video, frames, tracks, hints=None):
         if v["role"] in ("player", "goalkeeper"):
             v["team"] = -1
     # each player's typical shirt colour: median Lab with brightness at half weight. Broadcast compression and light
-    # move kit colours a long way from the real kit (Barcelona's garnet and blue stripes read as a dull dark grey,
-    # Athletic's lavender stays lavender), so players are grouped by what the camera shows, not matched to swatches.
+    # move kit colours a long way from the real kit (garnet and blue stripes read as a dull dark grey,
+    # lavender stays lavender), so players are grouped by what the camera shows, not matched to swatches.
     med = {t: np.median(np.vstack(pixels[t]) / LAB_W, axis=0) for t in tids}
     X = np.array([[.5 * med[t][0], med[t][1], med[t][2]] for t in tids]); wts = np.array([len(features[t]) for t in tids])
     # three groups: the two biggest are the teams; a clearly separate third is officials the detector called players
@@ -187,7 +187,7 @@ def assign(video, frames, tracks, hints=None):
     if app is not None:
         # colour and appearance each decide where they are sure: the appearance groups are lined up with the colour
         # groups, then a player whose crops fall in one appearance group at least 75% of the time takes that group.
-        # On Barcelona v Athletic the two disagreed on 3 of 21: one track that was grass, two players the appearance
+        # On a LaLiga tactical camera clip the two disagreed on 3 of 21: one track that was grass, two players the appearance
         # model was unsure of (58%), all three right by colour.
         app, share, n = app
         if np.mean(app == labels) < .5:

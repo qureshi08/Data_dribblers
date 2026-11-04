@@ -18,7 +18,7 @@ In the app: drop a match video, give the title and the two teams, pick each team
 The same pipeline runs without the app:
 
 ```
-.venv/Scripts/python run.py match.mp4 --names "BAR,ATH" --start 480 --seconds 30 --ball-model
+.venv/Scripts/python run.py match.mp4 --names "HOME,AWAY" --start 480 --seconds 30 --ball-model
 ```
 
 ## How it works
@@ -28,7 +28,7 @@ The same pipeline runs without the app:
 | Detect and track | `analyze.py` | YOLOv8 finds players, goalkeepers, referees and ball candidates in each analysed frame. BoT-SORT tracks people across frames with camera motion compensation, so tracks survive the broadcast camera's pans. The pitch keypoint model fits a homography each frame, so every position is in real metres on a 105 x 68 m pitch. |
 | Teams | `teams.py` | Groups players by the colour the camera actually shows (median Lab, brightness at half weight), in three groups so neon officials never swallow a team. A second opinion comes from SigLIP image embeddings of each player's shirt and shorts (the method in Roboflow's sports project): where it is sure of a player (75% of his crops in one group) it overrides the colour, which helps when sun and shade change how a kit looks. The kit colours chosen at upload only name the groups. Also catches goalkeepers the detector called referees, and people who stay off the pitch (camera crew, ball boys). |
 | Identity | `stitch.py` | Re-joins a player lost for up to 5 s when a new track starts close enough on the pitch and the shirt looks the same. |
-| Ball | `ball.py` | Picks the match ball out of every ball candidate: off the pitch is never the ball, spare balls and painted spots that never move are dropped, short tracks are linked within ball speed, and the best physically possible chain is kept. Gaps under 0.6 s are filled. `--slice` also searches enlarged 3 x 2 tiles for a tiny ball; it is off by default, because on Barcelona v Athletic its extra candidates (boots, spots) pulled the path off the real ball. `ball_sheet.py` draws the chosen ball on every frame for checking by eye. |
+| Ball | `ball.py` | Picks the match ball out of every ball candidate: off the pitch is never the ball, spare balls and painted spots that never move are dropped, short tracks are linked within ball speed, and the best physically possible chain is kept. Gaps under 0.6 s are filled. `--slice` also searches enlarged 3 x 2 tiles for a tiny ball; it is off by default, because on a tactical camera test its extra candidates (boots, spots) pulled the path off the real ball. `ball_sheet.py` draws the chosen ball on every frame for checking by eye. |
 | Stats | `stats.py` | Possession, passes, shots and xG, distance, speed, sprints, heatmaps, pass network. |
 | Tactics | `advanced.py` | Pitch control (Spearman, Shaw simplified), pressing on the ball carrier, xT per pass (Karun Singh's grid), packing, team width, depth and line height. |
 | Match page | `report.py`, `report_template.html` | One HTML page: the video with the tracking drawn live, layers (rings, numbers, ball trail, pitch control, pass options, defensive lines, team shape, mini radar), key moments, player cards with a clip behind every number, tactics and Ask. |
@@ -36,7 +36,7 @@ The same pipeline runs without the app:
 
 ## Where it stands
 
-Tested on broadcast clips of Bundesliga and LaLiga matches. On a 30 second Bundesliga clip from a fixed wide camera: the pitch mapped in every analysed frame, the two teams and the referee split by kit, the ball found in 77% of frames, possession 65 to 35 and passes counted for both sides. On a LaLiga tactical camera clip (Barcelona v Athletic), with a moving camera, small players and kits that look alike under stadium light, results are weaker. Over 30 seconds of that match (8:08 to 8:38), checked frame by frame with `ball_sheet.py`, the ball was chosen in 62% of frames and was the real ball in nearly all of them. It is lost whenever the director cuts to the wide shot, where the ball is two or three pixels, and a straight line fill misses a lofted pass. The teams split 10 against 10 on the pitch, with the shirt check agreeing with colour on 88% of players. It runs on a laptop processor today, about a minute of computing per second of video in Fast mode; a GPU is the next step for full matches.
+Tested on broadcast clips of Bundesliga and LaLiga matches. On a 30 second Bundesliga clip from a fixed wide camera: the pitch mapped in every analysed frame, the two teams and the referee split by kit, the ball found in 77% of frames, possession 65 to 35 and passes counted for both sides. On a LaLiga tactical camera, with small players and kits that look alike under stadium light, the ball is much harder: the model misses a ball of four to eight pixels and can take a painted spot for it, so the next step is fine tuning the ball model on openly licensed footage like that. It runs on a laptop processor today, about a minute of computing per second of video in Fast mode; a GPU is the next step for full matches.
 Known limits: track numbers are not shirt numbers yet, the ball is lost when it is a few blurred pixels, close ups and replays break tracking, and shots are inferred from ball speed and direction.
 
 ## Credits
